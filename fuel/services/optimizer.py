@@ -65,7 +65,7 @@ def _load_stations() -> list[dict]:
                 "price": price,
             })
     return stations
-
+#only contains city and state
 
 def _build_sampled_route(geometry: list) -> tuple[list, list]:
     sampled = geometry[::POLYLINE_STEP]
@@ -78,7 +78,7 @@ def _build_sampled_route(geometry: list) -> tuple[list, list]:
 
 
 def _state_mile_ranges(sampled: list, cum: list) -> dict[str, tuple[float, float]]:
-    #finds the nearest state centroid. tells us which state each part of the route passes through
+    #finds the nearest state centroid. tells me which miles each state occupies on the route, for eg Ohio covers miles 310 to 560
     #can't geocode 3,900 cities in real time, so you approximate by placing them on the route based on their state.
     ranges: dict[str, list] = {}
     for i, (rlat, rlon) in enumerate(sampled):
@@ -99,7 +99,6 @@ def _state_mile_ranges(sampled: list, cum: list) -> dict[str, tuple[float, float
 
 
 def _coords_at_mile(target_miles: float, sampled: list, cum: list) -> tuple[float, float]:
-    """Return the (lat, lon) on the sampled route at approximately target_miles."""
     for i in range(len(cum) - 1):
         if cum[i] <= target_miles <= cum[i + 1]:
             seg = cum[i + 1] - cum[i]
@@ -111,19 +110,12 @@ def _coords_at_mile(target_miles: float, sampled: list, cum: list) -> tuple[floa
 
 
 def find_optimal_stops(geometry: list, total_miles: float) -> dict:
-    """
-    Greedy fuel stop optimizer.
-
-    Uses route geometry to determine which miles each state covers, then
-    distributes that state's stations across its route segment.
-    Greedily picks the cheapest station within MAX_RANGE_MILES at each step.
-    """
+   #i spread each state's stations evenly across the mile range so the greedy algo can find the station
+   #from my current position, find all stations within the next 500 miles,that's the tank range at 10 MPG and pick the cheapest one. Repeat until I can reach the finish on a single tank
     all_stations = _load_stations()
     sampled, cum = _build_sampled_route(geometry)
     state_ranges = _state_mile_ranges(sampled, cum)
 
-    # Assign each station a route position within its state's mile range,
-    # spread evenly so the greedy algorithm can find stations throughout large states.
     by_state: dict[str, list] = {}
     for s in all_stations:
         if s["state"] in state_ranges:
@@ -134,7 +126,6 @@ def find_optimal_stops(geometry: list, total_miles: float) -> dict:
         min_mile, max_mile = state_ranges[state]
         n = len(stations)
         for i, s in enumerate(stations):
-            # Spread stations evenly across the state's route segment
             if n == 1:
                 pos = (min_mile + max_mile) / 2
             else:
@@ -143,7 +134,6 @@ def find_optimal_stops(geometry: list, total_miles: float) -> dict:
 
     route_stations.sort(key=lambda s: s["route_miles"])
 
-    # Greedy selection: from current position, pick cheapest in next 500 miles
     stops = []
     current_pos = 0.0
 
@@ -163,7 +153,6 @@ def find_optimal_stops(geometry: list, total_miles: float) -> dict:
             )
 
         best = min(reachable, key=lambda s: s["price"])
-        # Find the route point (lat/lon) closest to this stop's mile position
         lat, lon = _coords_at_mile(best["route_miles"], sampled, cum)
         stops.append({
             "name": best["name"],
@@ -176,7 +165,9 @@ def find_optimal_stops(geometry: list, total_miles: float) -> dict:
         })
         current_pos = best["route_miles"]
 
-    # Weighted fuel cost
+#cost is calculated per leg
+#each segment is priced at the station fueled before it. 
+#leg miles/10 to give gallons, multiplied by price, to get toal cost. 
     positions = [0.0] + [s["miles_from_start"] for s in stops] + [total_miles]
     leg_prices = ([stops[0]["price_per_gallon"]] if stops else []) + [s["price_per_gallon"] for s in stops]
 

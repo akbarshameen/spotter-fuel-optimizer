@@ -108,7 +108,7 @@ class FuelRouteView(APIView):
                 status=status.HTTP_502_BAD_GATEWAY,
             )
 
-        #all fuel stop logic runs locally
+        #all fuel stop logic(optimizer) runs locally
         try:
             fuel_result = find_optimal_stops(route["geometry"], route["distance_miles"])
         except ValueError as e:

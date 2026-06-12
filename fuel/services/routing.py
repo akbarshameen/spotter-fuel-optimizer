@@ -21,3 +21,6 @@ def get_route(start: tuple[float, float], finish: tuple[float, float]) -> dict:
     distance_miles = route["distance"] / 1609.344
     geometry = polyline.decode(route["geometry"])  # list of (lat, lon)
     return {"distance_miles": distance_miles, "geometry": geometry}
+
+#osrm
+#gets us the total distance in miles+polyline(which is thousands of lat/lon points tracing the exact road)
