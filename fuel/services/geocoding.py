@@ -5,7 +5,6 @@ HEADERS = {"User-Agent": "FuelRouteOptimizer/1.0"}
 
 
 def geocode(location: str) -> tuple[float, float]:
-    """Return (lat, lon) for a US location string, or raise ValueError."""
     resp = requests.get(
         NOMINATIM_URL,
         params={"q": location, "format": "json", "limit": 1, "countrycodes": "us"},
@@ -18,3 +17,4 @@ def geocode(location: str) -> tuple[float, float]:
         raise ValueError(f"Location not found: {location}")
     r = results[0]
     return float(r["lat"]), float(r["lon"])
+#max 1 request/second. hence parallelized start+finish

@@ -78,11 +78,8 @@ def _build_sampled_route(geometry: list) -> tuple[list, list]:
 
 
 def _state_mile_ranges(sampled: list, cum: list) -> dict[str, tuple[float, float]]:
-    """
-    For each route vertex, find the nearest state centroid.
-    Returns {state: (first_mile, last_mile)} — the actual mile range where
-    that state appears along the route.
-    """
+    #finds the nearest state centroid. tells us which state each part of the route passes through
+    #can't geocode 3,900 cities in real time, so you approximate by placing them on the route based on their state.
     ranges: dict[str, list] = {}
     for i, (rlat, rlon) in enumerate(sampled):
         best_state, best_d = None, float("inf")

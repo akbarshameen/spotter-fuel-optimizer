@@ -5,13 +5,7 @@ OSRM_URL = "https://router.project-osrm.org/route/v1/driving"
 
 
 def get_route(start: tuple[float, float], finish: tuple[float, float]) -> dict:
-    """
-    Call OSRM once and return:
-      {
-        "distance_miles": float,
-        "geometry": [[lat, lon], ...],   # decoded polyline
-      }
-    """
+    
     coords = f"{start[1]},{start[0]};{finish[1]},{finish[0]}"
     resp = requests.get(
         f"{OSRM_URL}/{coords}",

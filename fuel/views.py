@@ -82,8 +82,7 @@ class FuelRouteView(APIView):
                 {"error": "Both 'start' and 'finish' fields are required."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        # Geocode both locations in parallel to save time
+        #nominatim, parallel(max 1 req/sec)
         with ThreadPoolExecutor(max_workers=2) as executor:
             fut_start = executor.submit(geocode, start_str)
             fut_finish = executor.submit(geocode, finish_str)
@@ -100,7 +99,7 @@ class FuelRouteView(APIView):
             except Exception:
                 return Response({"error": "Geocoding service unavailable."}, status=status.HTTP_502_BAD_GATEWAY)
 
-        # Single OSRM call — returns distance + full polyline
+        #osrm, distance+polyline
         try:
             route = get_route(start_coords, finish_coords)
         except Exception as e:
@@ -109,7 +108,7 @@ class FuelRouteView(APIView):
                 status=status.HTTP_502_BAD_GATEWAY,
             )
 
-        # All fuel stop logic runs locally on the polyline — no more API calls
+        #all fuel stop logic runs locally
         try:
             fuel_result = find_optimal_stops(route["geometry"], route["distance_miles"])
         except ValueError as e:
@@ -132,16 +131,12 @@ class FuelRouteView(APIView):
 
 
 def _build_google_maps_url(start, finish, stops) -> str:
-    """
-    Build a Google Maps directions URL with start, finish, and fuel stops as waypoints.
-    Google Maps supports up to 10 waypoints in the URL. If there are more stops,
-    we pick evenly spaced ones so the URL stays valid.
-    """
+    
     MAX_WAYPOINTS = 10
 
     waypoint_stops = stops
     if len(stops) > MAX_WAYPOINTS:
-        # Pick evenly spaced stops to stay within the limit
+        #picks evenly spaced stops to stay within the limit
         step = len(stops) / MAX_WAYPOINTS
         waypoint_stops = [stops[int(i * step)] for i in range(MAX_WAYPOINTS)]
 
